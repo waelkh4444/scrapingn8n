@@ -45,8 +45,8 @@ def get_infogreffe_info(siren):
 def scrape_sheet():
     try:
         creds_json = os.getenv("GOOGLE_SHEETS_CREDENTIALS")
-	creds_dict = json.loads(creds_json)
-	gc = gspread.service_account_from_dict(creds_dict)
+        creds_dict = json.loads(creds_json)
+        gc = gspread.service_account_from_dict(creds_dict)
         sh = gc.open("base_insee")
         worksheet = sh.sheet1
         rows = worksheet.get_all_values()
