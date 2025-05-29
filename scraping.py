@@ -5,6 +5,9 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 import time
 import gspread.utils
+import os
+from oauth2client.service_account import ServiceAccountCredentials
+import json
 
 app = Flask(__name__)
 
@@ -41,7 +44,9 @@ def get_infogreffe_info(siren):
 @app.route('/scrape-sheet', methods=['POST'])
 def scrape_sheet():
     try:
-        gc = gspread.service_account(filename='C:/Users/Wael Khanfir/Downloads/credential.json')
+        creds_json = os.getenv("GOOGLE_SHEETS_CREDENTIALS")
+	creds_dict = json.loads(creds_json)
+	gc = gspread.service_account_from_dict(creds_dict)
         sh = gc.open("base_insee")
         worksheet = sh.sheet1
         rows = worksheet.get_all_values()
