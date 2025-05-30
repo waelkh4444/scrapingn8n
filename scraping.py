@@ -1,42 +1,54 @@
 from flask import Flask, request, jsonify
 import gspread
-import requests
-from bs4 import BeautifulSoup
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.options import Options
+import time
 import gspread.utils
 import os
+from oauth2client.service_account import ServiceAccountCredentials
 import json
 
 app = Flask(__name__)
 
-# === Fonction scraping avec BeautifulSoup
+# === Fonction scraping
 def get_infogreffe_info(siren):
-    url = f"https://www.infogreffe.fr/entreprise/{siren}"
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
-    }
-    
+    options = Options()
+    options.add_argument("--headless=new")  # Obligation en environnement cloud
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--disable-gpu")
+    options.add_argument("--window-size=1920,1080")
+
+    driver = webdriver.Chrome(options=options)
+
     try:
-        response = requests.get(url, headers=headers, timeout=10)
-        if response.status_code != 200:
-            return "Non trouvé", "Non trouvé"
+        url = f"https://www.infogreffe.fr/entreprise/{siren}"
+        driver.get(url)
+        time.sleep(5)
 
-        soup = BeautifulSoup(response.text, 'html.parser')
+        try:
+            dirigeant = driver.find_element(
+                By.XPATH, "//div[@data-testid='block-representant-legal']//div[contains(@class, 'textData')]"
+            ).text.strip()
+        except:
+            dirigeant = "Non trouvé"
 
-        dirigeant_div = soup.find("div", {"data-testid": "block-representant-legal"})
-        dirigeant = dirigeant_div.find("div", class_="textData").get_text(strip=True) if dirigeant_div else "Non trouvé"
-
-        ca_div = soup.find("div", {"data-testid": "ca"})
-        ca = ca_div.get_text(strip=True) if ca_div else "Non trouvé"
+        try:
+            ca = driver.find_element(
+                By.XPATH, "//div[@data-testid='ca']"
+            ).text.strip()
+        except:
+            ca = "Non trouvé"
 
         return dirigeant, ca
-
-    except Exception as e:
-        print(f"Erreur de scraping: {e}")
-        return "Non trouvé", "Non trouvé"
+    finally:
+        driver.quit()
 
 @app.route('/scrape-sheet', methods=['POST'])
 def scrape_sheet():
     try:
+        # Chargement des credentials Google Sheets depuis une variable d'environnement
         creds_json = os.getenv("GOOGLE_SHEETS_CREDENTIALS")
         creds_dict = json.loads(creds_json)
         gc = gspread.service_account_from_dict(creds_dict)

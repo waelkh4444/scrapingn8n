@@ -1,17 +1,35 @@
-# Utilise une image Python légère
+# Utilise une image Python
 FROM python:3.11-slim
 
-# Crée le dossier de travail
+# Variables d’environnement
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+
+# Installer les dépendances système
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    curl \
+    unzip \
+    chromium-driver \
+    chromium \
+    && apt-get clean
+
+# Définir les variables d’environnement pour Selenium
+ENV CHROME_BIN=/usr/bin/chromium
+ENV PATH=$PATH:/usr/bin/chromium
+
+# Créer et définir le répertoire de travail
 WORKDIR /app
 
-# Copie les fichiers nécessaires
-COPY . .
+# Copier les fichiers dans l’image
+COPY . /app
 
-# Installe les dépendances
-RUN pip install --no-cache-dir -r requirements.txt
+# Installer les dépendances Python
+RUN pip install --upgrade pip
+RUN pip install -r requirements.txt
 
-# Expose le port utilisé par Flask
+# Exposer le port utilisé par Flask
 EXPOSE 5000
 
-# Commande de démarrage
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "scraping:app"]
+# Commande pour lancer l'application Flask avec gunicorn
+CMD ["gunicorn", "scraping:app", "--bind", "0.0.0.0:5000"]
