@@ -14,8 +14,12 @@ app = Flask(__name__)
 # === Fonction scraping
 def get_infogreffe_info(siren):
     options = Options()
-    options.add_argument("--headless")
+    options.add_argument("--headless=new")  # Obligation en environnement cloud
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--disable-gpu")
     options.add_argument("--window-size=1920,1080")
+
     driver = webdriver.Chrome(options=options)
 
     try:
@@ -44,9 +48,11 @@ def get_infogreffe_info(siren):
 @app.route('/scrape-sheet', methods=['POST'])
 def scrape_sheet():
     try:
+        # Chargement des credentials Google Sheets depuis une variable d'environnement
         creds_json = os.getenv("GOOGLE_SHEETS_CREDENTIALS")
         creds_dict = json.loads(creds_json)
         gc = gspread.service_account_from_dict(creds_dict)
+
         sh = gc.open("base_insee")
         worksheet = sh.sheet1
         rows = worksheet.get_all_values()
@@ -94,6 +100,3 @@ def scrape_sheet():
 
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
-
-#if __name__ == "__main__":
-#    app.run(port=5000, debug=True)
