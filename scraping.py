@@ -41,6 +41,7 @@ def get_infogreffe_info(siren):
         except:
             ca = "Non trouvé"
 
+        print(f"➡️ Dirigeant : {dirigeant} | CA : {ca}")
         return dirigeant, ca
     finally:
         driver.quit()
@@ -89,14 +90,18 @@ def scrape_sheet():
             })
             lignes_traitees += 1
 
+            break  # 🔒 On ne traite qu'une ligne pour éviter crash mémoire
+
         if updates:
             worksheet.batch_update(updates)
+            print(f"✅ Mise à jour Google Sheet réussie ({lignes_traitees} ligne(s))")
 
         return jsonify({
             "status": "success",
-            "message": f"{lignes_traitees} lignes mises à jour.",
+            "message": f"{lignes_traitees} ligne(s) mise(s) à jour.",
             "updates": lignes_traitees
         })
 
     except Exception as e:
+        print(f"❌ Erreur : {str(e)}")
         return jsonify({"status": "error", "message": str(e)}), 500
