@@ -14,7 +14,7 @@ app = Flask(__name__)
 # === Fonction scraping
 def get_infogreffe_info(siren):
     options = Options()
-    options.add_argument("--headless=new")  # Obligation en environnement cloud
+    options.add_argument("--headless=new")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-gpu")
@@ -25,7 +25,7 @@ def get_infogreffe_info(siren):
     try:
         url = f"https://www.infogreffe.fr/entreprise/{siren}"
         driver.get(url)
-        time.sleep(5)
+        time.sleep(3)
 
         try:
             dirigeant = driver.find_element(
@@ -49,7 +49,6 @@ def get_infogreffe_info(siren):
 @app.route('/scrape-sheet', methods=['POST'])
 def scrape_sheet():
     try:
-        # Chargement des credentials Google Sheets depuis une variable d'environnement
         creds_json = os.getenv("GOOGLE_SHEETS_CREDENTIALS")
         creds_dict = json.loads(creds_json)
         gc = gspread.service_account_from_dict(creds_dict)
@@ -65,8 +64,12 @@ def scrape_sheet():
 
         updates = []
         lignes_traitees = 0
+        max_lignes = 5  # ⚠️ Traiter 5 lignes max à chaque appel
 
         for i, row in enumerate(rows[1:], start=2):
+            if lignes_traitees >= max_lignes:
+                break
+
             siren = row[siren_col] if len(row) > siren_col else ""
             dirigeant_val = row[dirigeant_col] if len(row) > dirigeant_col else ""
             ca_val = row[ca_col] if len(row) > ca_col else ""
@@ -76,9 +79,6 @@ def scrape_sheet():
 
             print(f"🔍 Traitement {siren}")
             dirigeant, ca = get_infogreffe_info(siren)
-
-            if dirigeant == "Non trouvé" and ca == "Non trouvé":
-                continue
 
             updates.append({
                 'range': gspread.utils.rowcol_to_a1(i, dirigeant_col + 1),
@@ -90,15 +90,15 @@ def scrape_sheet():
             })
             lignes_traitees += 1
 
-            break  # 🔒 On ne traite qu'une ligne pour éviter crash mémoire
+            time.sleep(4)  # 💤 Pause entre chaque appel Selenium
 
         if updates:
             worksheet.batch_update(updates)
-            print(f"✅ Mise à jour Google Sheet réussie ({lignes_traitees} ligne(s))")
+            print(f"✅ {lignes_traitees} lignes mises à jour.")
 
         return jsonify({
             "status": "success",
-            "message": f"{lignes_traitees} ligne(s) mise(s) à jour.",
+            "message": f"{lignes_traitees} ligne(s) traitée(s).",
             "updates": lignes_traitees
         })
 
