@@ -74,14 +74,8 @@ def scrape_sheet():
             if not siren or dirigeant_val or ca_val:
                 continue
 
-            print(f"🔍 Traitement SIREN : {siren}")
-            try:
-                dirigeant, ca = get_infogreffe_info(siren)
-            except Exception as err:
-                print(f"❌ Erreur sur SIREN {siren} : {str(err)}")
-                continue
-
-            print(f"➡️ Dirigeant : {dirigeant} | CA : {ca}")
+            print(f"🔍 Traitement {siren}")
+            dirigeant, ca = get_infogreffe_info(siren)
 
             if dirigeant == "Non trouvé" and ca == "Non trouvé":
                 continue
@@ -96,8 +90,7 @@ def scrape_sheet():
             })
             lignes_traitees += 1
 
-            # Pause entre chaque appel pour éviter surcharge
-            time.sleep(2)
+            break  # 🔒 On ne traite qu'une ligne pour éviter crash mémoire
 
         if updates:
             worksheet.batch_update(updates)
@@ -110,5 +103,5 @@ def scrape_sheet():
         })
 
     except Exception as e:
-        print(f"❌ Erreur globale : {str(e)}")
+        print(f"❌ Erreur : {str(e)}")
         return jsonify({"status": "error", "message": str(e)}), 500
